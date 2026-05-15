@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
+use App\Models\TicketIntrouvable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +24,16 @@ class TicketVerifyController extends Controller
 
         $needle = $this->normalizeNumero($validated['numero']);
         $idUsine = isset($validated['id_usine']) ? (int) $validated['id_usine'] : null;
+        $numeroSaisi = trim($validated['numero']);
+        $userId = (int) $request->user()->id;
+
+        if (Ticket::existsByNumero($numeroSaisi)) {
+            return response()->json([
+                'valid' => false,
+                'reason' => 'already_verified',
+                'message' => 'Ce ticket a déjà été vérifié.',
+            ]);
+        }
 
         $url = config('services.pegasus.mes_tickets_url');
         $maxPages = max(1, min(200, (int) config('services.pegasus.mes_tickets_max_pages', 100)));
@@ -87,10 +98,16 @@ class TicketVerifyController extends Controller
             ], 500);
         }
 
+        $created = TicketIntrouvable::record($numeroSaisi, $idUsine, $userId);
+
         return response()->json([
             'valid' => false,
             'reason' => 'not_found',
-            'message' => 'Ticket introuvable.',
+            'recorded' => true,
+            'recorded_new' => $created,
+            'message' => $created
+                ? 'Ticket introuvable. Il a été enregistré pour suivi.'
+                : 'Ticket introuvable (déjà enregistré pour suivi).',
         ]);
     }
 

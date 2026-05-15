@@ -14,10 +14,16 @@
       <div class="text-truncate">Vérifications</div>
     </a>
   </li>
-  <li class="menu-item @if(request()->routeIs('tickets.*')) active @endif">
+  <li class="menu-item @if(request()->routeIs('tickets.*') && ! request()->routeIs('tickets-introuvables.*')) active @endif">
     <a href="{{ route('tickets.index') }}" class="menu-link">
       <i class="menu-icon tf-icons bx bx-receipt"></i>
       <div class="text-truncate">Tickets vérifiés</div>
+    </a>
+  </li>
+  <li class="menu-item @if(request()->routeIs('tickets-introuvables.*')) active @endif">
+    <a href="{{ route('tickets-introuvables.index') }}" class="menu-link">
+      <i class="menu-icon tf-icons bx bx-error-circle"></i>
+      <div class="text-truncate">Tickets introuvables</div>
     </a>
   </li>
   <li class="menu-item @if(request()->routeIs('agents.*')) active @endif">

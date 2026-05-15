@@ -4,6 +4,7 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\UsinesCatalogController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketIntrouvableController;
 use App\Http\Controllers\TicketStoreController;
 use App\Http\Controllers\TicketVerifyController;
 use App\Http\Controllers\VerificationController;
@@ -28,6 +29,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/agents', [AgentController::class, 'index'])->name('agents.index');
 
     Route::get('/usines', [UsinesCatalogController::class, 'index'])->name('usines.index');
+
+    Route::get('/tickets-introuvables', [TicketIntrouvableController::class, 'index'])->name('tickets-introuvables.index');
 
     Route::get('/tickets/impression', [TicketController::class, 'print'])->name('tickets.print');
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');

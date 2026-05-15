@@ -433,11 +433,34 @@
                     countError.textContent = '';
                 }
 
+                function markRowIntrouvable(row, message) {
+                    if (!row) return;
+                    const icon = row.querySelector('.tv-ticket-icon');
+                    const fb = row.querySelector('.tv-ticket-feedback');
+                    const inp = row.querySelector('.tv-ticket-input');
+                    row.classList.add('tv-introuvable-recorded');
+                    row.classList.remove('tv-user-verified');
+                    clearRowTicket(row);
+                    if (icon) {
+                        icon.classList.remove('d-none', 'bg-label-secondary', 'bg-label-success', 'bg-label-danger');
+                        icon.classList.add('bg-label-warning');
+                        icon.innerHTML = '<i class="bx bx-error-circle text-warning fs-4"></i>';
+                    }
+                    if (inp) {
+                        inp.classList.remove('is-valid', 'is-invalid');
+                    }
+                    if (fb) {
+                        fb.classList.remove('text-danger', 'text-success');
+                        fb.classList.add('text-warning');
+                        fb.textContent = message || 'Ticket introuvable — enregistré pour suivi.';
+                    }
+                }
+
                 function resetRowUI(row) {
                     const icon = row.querySelector('.tv-ticket-icon');
                     const fb = row.querySelector('.tv-ticket-feedback');
                     const inp = row.querySelector('.tv-ticket-input');
-                    row.classList.remove('tv-user-verified');
+                    row.classList.remove('tv-user-verified', 'tv-introuvable-recorded');
                     clearRowTicket(row);
                     if (icon) {
                         icon.classList.add('d-none');
@@ -553,19 +576,22 @@
                                     body.error ||
                                     (body.errors && body.errors.numero && body.errors.numero[0]) ||
                                     'Ticket introuvable.';
-                                setRowResult(row, false, msg);
-                                if (body.reason === 'already_verified') {
+                                if (body.reason === 'not_found' && body.recorded) {
+                                    markRowIntrouvable(row, msg);
                                     showFeedbackModal(
                                         'warning',
-                                        'Ticket déjà vérifié',
-                                        msg || 'Ce ticket a déjà été vérifié.'
-                                    );
-                                } else if (body.reason === 'not_found') {
-                                    showFeedbackModal(
-                                        'danger',
                                         'Ticket introuvable',
-                                        msg || 'Ticket introuvable.'
+                                        msg || 'Ticket introuvable — enregistré pour suivi.'
                                     );
+                                } else {
+                                    setRowResult(row, false, msg);
+                                    if (body.reason === 'already_verified') {
+                                        showFeedbackModal(
+                                            'warning',
+                                            'Ticket déjà vérifié',
+                                            msg || 'Ce ticket a déjà été vérifié.'
+                                        );
+                                    }
                                 }
                             }
                         })
@@ -700,7 +726,8 @@
                         return;
                     }
                     const invalid = Array.from(inputs).filter(function (i) {
-                        return i.classList.contains('is-invalid');
+                        const r = i.closest('.tv-ticket-row');
+                        return i.classList.contains('is-invalid') && !(r && r.classList.contains('tv-introuvable-recorded'));
                     });
                     if (invalid.length) {
                         showFeedbackModal(
@@ -711,6 +738,8 @@
                         return;
                     }
                     const pending = Array.from(inputs).filter(function (i) {
+                        const r = i.closest('.tv-ticket-row');
+                        if (r && r.classList.contains('tv-introuvable-recorded')) return false;
                         const v = i.value.trim();
                         return v.length >= 2 && !i.classList.contains('is-valid');
                     });
@@ -726,6 +755,7 @@
                     const payloads = [];
                     var missingData = false;
                     ticketRows.forEach(function (r) {
+                        if (r.classList.contains('tv-introuvable-recorded')) return;
                         var inp = r.querySelector('.tv-ticket-input');
                         if (!inp || !inp.value.trim()) return;
                         if (!r.tvTicketPayload) {
@@ -742,11 +772,23 @@
                         );
                         return;
                     }
-                    if (payloads.length !== vals.filter(Boolean).length) {
+                    var valsToSave = vals.filter(function (v, idx) {
+                        var row = ticketRows[idx];
+                        return v && row && !row.classList.contains('tv-introuvable-recorded');
+                    });
+                    if (payloads.length !== valsToSave.length) {
                         showFeedbackModal(
                             'warning',
                             'Enregistrement impossible',
                             'Chaque ligne doit avoir des données vérifiées avant l’enregistrement.'
+                        );
+                        return;
+                    }
+                    if (payloads.length === 0) {
+                        showFeedbackModal(
+                            'warning',
+                            'Aucun ticket à enregistrer',
+                            'Les tickets introuvables ont déjà été enregistrés pour suivi. Aucun ticket valide à enregistrer en local.'
                         );
                         return;
                     }
