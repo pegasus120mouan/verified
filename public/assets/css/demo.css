@@ -1,0 +1,432 @@
+/*
+* demo.css
+* File include item demo only specific css only
+******************************************************************************/
+
+.menu .app-brand.demo {
+  height: auto;
+  min-height: 72px;
+  margin-top: 0;
+  padding: 1rem 1.25rem 0.75rem;
+}
+
+/* Navigation latérale */
+.app-menu-nav .menu-header {
+  margin-top: 0.25rem;
+  padding: 0.5rem 1.25rem 0.35rem;
+}
+
+.app-menu-nav .menu-header-text {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #a1acb8;
+}
+
+.app-menu-nav .menu-item {
+  margin: 0.125rem 0.75rem;
+}
+
+.app-menu-nav .menu-item > .menu-link {
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #566a7f;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.app-menu-nav .menu-item > .menu-link .menu-icon {
+  font-size: 1.35rem;
+  margin-right: 0.625rem;
+  color: #8592a3;
+  transition: color 0.15s ease;
+}
+
+.app-menu-nav .menu-item.active > .menu-link,
+.app-menu-nav .menu-item > .menu-link:hover {
+  background-color: rgba(105, 108, 255, 0.12);
+  color: #696cff;
+}
+
+.app-menu-nav .menu-item.active > .menu-link {
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 0 #696cff;
+}
+
+.app-menu-nav .menu-item.active > .menu-link .menu-icon,
+.app-menu-nav .menu-item > .menu-link:hover .menu-icon {
+  color: #696cff;
+}
+
+.app-brand-logo.demo svg {
+  width: 22px;
+  height: 38px;
+}
+
+.app-brand-text.demo {
+  font-size: 1.75rem;
+  letter-spacing: -0.5px;
+}
+
+/* ! For .layout-navbar-fixed added fix padding top to .layout-page */
+/* Detached navbar */
+.layout-navbar-fixed .layout-wrapper:not(.layout-horizontal):not(.layout-without-menu) .layout-page {
+  padding-top: 74px !important;
+}
+/* Default navbar */
+.layout-navbar-fixed .layout-wrapper:not(.layout-without-menu) .layout-page {
+  padding-top: 64px !important;
+}
+.docs-page .layout-navbar-fixed.layout-wrapper:not(.layout-without-menu) .layout-page,
+.docs-page .layout-menu-fixed.layout-wrapper:not(.layout-without-menu) .layout-page {
+  padding-top: 62px !important;
+}
+
+/* Navbar page z-index issue solution */
+.content-wrapper .navbar {
+  z-index: auto;
+}
+
+/*
+ * Sneat (core.css) : sous 1200px le menu (1100) et l’overlay (1099) sont au-dessus
+ * des modals Bootstrap (1090 / 1089) — le voile ou le menu masquent alors la boîte de dialogue.
+ * Quand un modal est ouvert (body.modal-open), on abaisse ces calques sous les modals.
+ */
+@media (max-width: 1199.98px) {
+  body.modal-open .layout-menu {
+    z-index: 1040 !important;
+  }
+  body.modal-open .layout-overlay {
+    z-index: 1039 !important;
+  }
+}
+
+/*
+* Content
+******************************************************************************/
+
+.demo-blocks > * {
+  display: block !important;
+}
+
+.demo-inline-spacing > * {
+  margin: 1rem 0.375rem 0 0 !important;
+}
+
+/* ? .demo-vertical-spacing class is used to have vertical margins between elements. To remove margin-top from the first-child, use .demo-only-element class with .demo-vertical-spacing class. For example, we have used this class in forms-input-groups.html file. */
+.demo-vertical-spacing > * {
+  margin-top: 1rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+.demo-vertical-spacing-lg > * {
+  margin-top: 1.875rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing-lg.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+.demo-vertical-spacing-xl > * {
+  margin-top: 5rem !important;
+  margin-bottom: 0 !important;
+}
+.demo-vertical-spacing-xl.demo-only-element > :first-child {
+  margin-top: 0 !important;
+}
+
+/* Dropdown buttons going out of small screens */
+@media (max-width: 576px) {
+  #dropdown-variation-demo .btn-group .text-truncate {
+    width: 231px;
+    position: relative;
+  }
+  #dropdown-variation-demo .btn-group .text-truncate::after {
+    position: absolute;
+    top: 45%;
+    right: 0.65rem;
+  }
+}
+
+/*
+* Layout demo
+******************************************************************************/
+
+.layout-demo-wrapper {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+.layout-demo-placeholder img {
+  width: 900px;
+}
+.layout-demo-info {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/*
+ * Pages listes (usines, catalogues)
+ ******************************************************************************/
+.app-page-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: rgba(105, 108, 255, 0.12);
+  color: #696cff;
+  font-size: 1.5rem;
+}
+
+.app-page-title {
+  font-weight: 600;
+  color: #566a7f;
+  letter-spacing: -0.01em;
+}
+
+.app-page-subtitle {
+  font-size: 0.9375rem;
+  max-width: 36rem;
+}
+
+.app-list-card {
+  overflow: hidden;
+}
+
+.app-list-card-header .input-group-text {
+  background-color: #fff;
+}
+
+.app-list-card-header .form-control:focus {
+  box-shadow: none;
+}
+
+.app-list-card-header .input-group:focus-within {
+  box-shadow: 0 0 0 0.2rem rgba(105, 108, 255, 0.15);
+  border-radius: 0.375rem;
+}
+
+.app-list-card-header .input-group:focus-within .input-group-text,
+.app-list-card-header .input-group:focus-within .form-control {
+  border-color: #696cff;
+}
+
+.app-list-card .table.app-data-table thead tr th {
+  background: linear-gradient(180deg, #696cff 0%, #5f61e6 100%) !important;
+  color: #fff !important;
+  --bs-heading-color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 0 !important;
+  padding: 0.875rem 1.25rem;
+  white-space: nowrap;
+}
+
+.app-list-card .table.app-data-table tbody tr {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-list-card .table.app-data-table tbody tr:hover {
+  background-color: rgba(105, 108, 255, 0.05);
+}
+
+.app-list-card .table.app-data-table tbody td {
+  padding: 0.9375rem 1.25rem;
+  vertical-align: middle;
+  border-color: #eceef1;
+}
+
+/* Tableau usines — présentation renforcée */
+.app-usine-table-wrap {
+  background: #fff;
+}
+
+.app-usine-table-toolbar {
+  background: linear-gradient(180deg, #fafafb 0%, #fff 100%);
+}
+
+.app-list-card .table.app-usine-table tbody tr:nth-child(even) {
+  background-color: #fafafb;
+}
+
+.app-list-card .table.app-usine-table tbody tr.app-usine-table-row--linked:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(105, 108, 255, 0.1) 0%,
+    rgba(105, 108, 255, 0.03) 35%,
+    transparent 100%
+  );
+}
+
+.app-list-card .table.app-usine-table .app-usine-th-name {
+  padding-left: 1.5rem !important;
+}
+
+.app-list-card .table.app-usine-table .app-usine-th-tickets {
+  width: 11rem;
+}
+
+.app-list-card .table.app-usine-table .app-usine-th-action {
+  width: 9rem;
+  padding-right: 1.5rem !important;
+}
+
+.app-list-card .table.app-usine-table .app-usine-td-name {
+  padding-left: 1.5rem !important;
+}
+
+.app-list-card .table.app-usine-table .app-usine-td-action {
+  padding-right: 1.5rem !important;
+}
+
+.app-usine-open-btn {
+  border-radius: 2rem;
+  font-weight: 500;
+  padding-inline: 0.875rem;
+  white-space: nowrap;
+}
+
+.app-usine-open-btn .bx {
+  font-size: 1.125rem;
+  vertical-align: middle;
+}
+
+.app-table-row-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: #566a7f;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.12s ease;
+}
+
+.app-table-row-link:hover {
+  color: #696cff;
+}
+
+.app-table-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: rgba(105, 108, 255, 0.08);
+  color: #696cff;
+  font-size: 1.125rem;
+}
+
+.app-table-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: #f5f5f9;
+  color: #a1acb8;
+  font-size: 2rem;
+}
+
+.app-list-card-footer {
+  background-color: #fafafb;
+}
+
+.app-usine-ticket-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 3.25rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #8592a3;
+  background-color: #f1f2f6;
+  border: 1px solid #e4e6eb;
+}
+
+.app-usine-ticket-count--zero {
+  color: #a1acb8;
+  background-color: #f5f5f9;
+  border-color: #e7e9ed;
+}
+
+.app-usine-ticket-count--zero .bx {
+  opacity: 0.65;
+}
+
+.app-usine-ticket-count--has {
+  color: #28c76f;
+  background-color: rgba(40, 199, 111, 0.12);
+  border-color: rgba(40, 199, 111, 0.35);
+  box-shadow: 0 1px 2px rgba(40, 199, 111, 0.08);
+}
+
+.app-usine-ticket-count--has .bx {
+  font-size: 1.1rem;
+}
+
+.app-usine-ticket-count-value {
+  line-height: 1;
+}
+
+/*
+ * Cartes statistiques (tickets) — le thème .card impose un fond blanc : surcharge explicite
+ ******************************************************************************/
+.card.app-stat-card {
+  box-shadow: 0 0.125rem 0.375rem rgba(67, 89, 113, 0.12);
+  border: 0;
+}
+
+.card.app-stat-card .card-body {
+  color: #fff;
+}
+
+.card.app-stat-card .app-stat-card-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.card.app-stat-card .app-stat-card-label {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: #fff;
+  opacity: 0.95;
+}
+
+.card.app-stat-card.app-stat-card--info {
+  background: linear-gradient(135deg, #00cfe8 0%, #00b5cc 100%) !important;
+  --bs-card-bg: transparent;
+}
+
+.card.app-stat-card.app-stat-card--warning {
+  background: linear-gradient(135deg, #ff9f43 0%, #ff8510 100%) !important;
+  --bs-card-bg: transparent;
+}
+
+.card.app-stat-card.app-stat-card--success {
+  background: linear-gradient(135deg, #28c76f 0%, #1f9d57 100%) !important;
+  --bs-card-bg: transparent;
+}
