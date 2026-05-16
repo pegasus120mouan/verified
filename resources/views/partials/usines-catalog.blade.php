@@ -1,6 +1,7 @@
 @php
     $formAction = $formAction ?? route('verifications');
     $linkRows = $linkRows ?? true;
+    $usineRouteName = $usineRouteName ?? 'verifications.usine';
     $searchInputId = $searchInputId ?? 'search-usine';
     $pageTitle = $pageTitle ?? 'Liste des usines';
     $pageSubtitle = $pageSubtitle ?? 'Consultez et accédez aux sites de vérification des tickets.';
@@ -104,7 +105,7 @@
               $id = $u['id_usine'] ?? '';
               $idUsine = (int) $id;
               $nbTickets = (int) ($ticketCountsByUsine[$idUsine] ?? 0);
-              $usineUrl = ($linkRows && $id !== '') ? route('verifications.usine', ['id_usine' => $id]) : null;
+              $usineUrl = ($linkRows && $id !== '') ? route($usineRouteName, ['id_usine' => $id]) : null;
             @endphp
             <tr class="app-usine-table-row @if($usineUrl) app-usine-table-row--linked @endif">
               <td class="app-usine-td-name" data-label="Usine">

@@ -6,6 +6,26 @@
 
 @section('content')
   <div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="rounded-3 p-4 h-100 shadow-sm" style="background:#ff9f43;color:#fff;">
+          <div style="font-size:2.25rem;font-weight:700;line-height:1.1;color:#fff;">{{ number_format($stats['total'] ?? 0, 0, ',', ' ') }}</div>
+          <p class="mb-0 mt-2" style="font-size:0.9375rem;color:#fff;">Tickets introuvables — <strong>Total</strong></p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="rounded-3 p-4 h-100 shadow-sm" style="background:#00cfe8;color:#fff;">
+          <div style="font-size:2.25rem;font-weight:700;line-height:1.1;color:#fff;">{{ number_format($stats['today'] ?? 0, 0, ',', ' ') }}</div>
+          <p class="mb-0 mt-2" style="font-size:0.9375rem;color:#fff;">Signalés <strong>aujourd'hui</strong></p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="rounded-3 p-4 h-100 shadow-sm" style="background:#7367f0;color:#fff;">
+          <div style="font-size:2.25rem;font-weight:700;line-height:1.1;color:#fff;">{{ number_format($stats['usines'] ?? 0, 0, ',', ' ') }}</div>
+          <p class="mb-0 mt-2" style="font-size:0.9375rem;color:#fff;">Usines <strong>concernées</strong></p>
+        </div>
+      </div>
+    </div>
     <div class="app-page-header d-flex flex-column flex-md-row align-items-md-start justify-content-md-between gap-3 mb-4">
       <div class="d-flex align-items-start gap-3">
         <div class="app-page-header-icon flex-shrink-0" style="background:rgba(255,159,67,.12);color:#ff9f43;">
@@ -14,7 +34,7 @@
         <div>
           <h4 class="mb-1 app-page-title">Tickets introuvables</h4>
           <p class="mb-0 text-muted app-page-subtitle">
-            Numéros saisis lors d'une vérification mais absents de l'API Pegasus — enregistrés pour suivi.
+            Numéros absents de l'API Pegasus — enregistrés en base locale, visibles par tous les vérificateurs de cette application.
           </p>
         </div>
       </div>
@@ -69,6 +89,7 @@
               <th class="app-usine-th app-usine-th-name">N° ticket</th>
               <th class="app-usine-th">Usine</th>
               <th class="app-usine-th">Motif</th>
+              <th class="app-usine-th">Signalé par</th>
               <th class="app-usine-th">Enregistré le</th>
               <th class="app-usine-th app-usine-th-tickets text-center">Mise à jour</th>
             </tr>
@@ -78,7 +99,7 @@
               @php
                 $nomUsine = $ticket->id_usine ? ($usineNames[$ticket->id_usine] ?? null) : null;
                 $raisonLabel = match ($ticket->raison) {
-                    'not_found' => 'Introuvable dans l\'API',
+                    'not_found' => 'Ticket introuvable dans la base Générale',
                     default => $ticket->raison,
                 };
               @endphp
@@ -102,20 +123,28 @@
                 <td>
                   <span class="badge bg-label-warning">{{ $raisonLabel }}</span>
                 </td>
+                <td>
+                  {{ $ticket->utilisateur?->name ?: ($ticket->utilisateur?->login ?? '—') }}
+                </td>
                 <td class="text-nowrap">
                   {{ $ticket->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}
                 </td>
-                <td class="text-center text-muted small text-nowrap">
+                <td class="text-center text-nowrap">
                   @if ($ticket->updated_at && $ticket->updated_at->ne($ticket->created_at))
-                    {{ $ticket->updated_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
-                  @else
-                    —
+                    <span class="text-muted small">{{ $ticket->updated_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</span>
                   @endif
+                  <form action="{{ route('tickets-introuvables.reverify', $ticket->id) }}" method="POST" class="d-inline reverify-form">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-primary btn-reverify" title="Re-vérifier dans l'API">
+                      <i class="bx bx-refresh btn-icon"></i>
+                      <i class="bx bx-loader-alt bx-spin btn-loader d-none"></i>
+                    </button>
+                  </form>
                 </td>
               </tr>
             @empty
               <tr>
-                <td colspan="5" class="p-0 border-0">
+                <td colspan="6" class="p-0 border-0">
                   <div class="app-table-empty py-5 px-4 text-center">
                     <div class="app-table-empty-icon mx-auto mb-3">
                       <i class="bx bx-error-circle"></i>
@@ -149,3 +178,19 @@
     </div>
   </div>
 @endsection
+
+@push('scripts')
+  <script>
+    document.querySelectorAll('.reverify-form').forEach(form => {
+      form.addEventListener('submit', function() {
+        const btn = this.querySelector('.btn-reverify');
+        const icon = btn.querySelector('.btn-icon');
+        const loader = btn.querySelector('.btn-loader');
+        
+        btn.disabled = true;
+        icon.classList.add('d-none');
+        loader.classList.remove('d-none');
+      });
+    });
+  </script>
+@endpush

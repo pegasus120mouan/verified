@@ -13,7 +13,7 @@ class TicketStatsComposer
 
     public function compose(View $view): void
     {
-        if (request()->routeIs('agents.index')) {
+        if (request()->routeIs('agents.index') || request()->routeIs('tickets-introuvables.index')) {
             return;
         }
 

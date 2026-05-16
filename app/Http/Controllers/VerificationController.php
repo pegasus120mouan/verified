@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
+use App\Services\ExcelTicketNumbersExtractor;
+use App\Services\PegasusMesTicketsLookup;
 use App\Services\PegasusReferenceLookup;
+use App\Services\TicketIntrouvableService;
 use App\Services\VerifiedTicketCounts;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -13,11 +16,273 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class VerificationController extends Controller
 {
     public function index(Request $request): View
+    {
+        $data = $this->mesUsinesListContext($request);
+
+        return view('verifications', $data);
+    }
+
+    /**
+     * Liste des usines pour le flux « Vérification paie » (même source API que les vérifications).
+     */
+    public function paie(Request $request): View
+    {
+        $data = $this->mesUsinesListContext($request);
+
+        return view('verification-paie', $data);
+    }
+
+    public function paieUsine(Request $request, string $id_usine): View
+    {
+        [$usine, $error] = $this->fetchUsineFromApi($id_usine);
+
+        if ($usine === null && $error === null) {
+            throw new NotFoundHttpException;
+        }
+
+        // Récupérer les résultats depuis le cache si disponible
+        $results = [];
+        $summary = null;
+        $cacheKey = session('paie_excel_cache_key');
+        if ($cacheKey) {
+            $cached = cache()->get($cacheKey);
+            if ($cached) {
+                $results = $cached['results'] ?? [];
+                $summary = $cached['summary'] ?? null;
+            }
+        }
+
+        return view('verification-paie-usine', [
+            'usine' => $usine,
+            'error' => $error,
+            'id_usine' => (int) $id_usine,
+            'results' => $results,
+            'summary' => $summary,
+        ]);
+    }
+
+    public function paieUsineVerifyExcel(
+        Request $request,
+        string $id_usine,
+        ExcelTicketNumbersExtractor $extractor,
+        PegasusMesTicketsLookup $lookup,
+        TicketIntrouvableService $introuvables,
+    ): RedirectResponse {
+        $request->validate([
+            'excel_file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+        ], [
+            'excel_file.required' => 'Veuillez choisir un fichier Excel ou CSV avant de lancer la vérification.',
+            'excel_file.file' => 'Le fichier envoyé est invalide.',
+            'excel_file.mimes' => 'Formats acceptés : .xlsx, .xls, .csv.',
+            'excel_file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $idUsine = (int) $id_usine;
+
+        $fetch = $lookup->fetchAllTicketsByCompactKey();
+        if (! $fetch['ok']) {
+            return redirect()
+                ->route('verification-paie.usine', ['id_usine' => $id_usine])
+                ->with('flash_error', $fetch['message']);
+        }
+
+        $index = $fetch['index'];
+
+        try {
+            $path = $request->file('excel_file')->getRealPath();
+            if ($path === false) {
+                throw new \RuntimeException('Fichier invalide.');
+            }
+            $numbers = $extractor->extract($path);
+        } catch (\Throwable $e) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'ZipArchive') || str_contains($msg, 'zip extension')) {
+                $msg = 'Impossible d’ouvrir le fichier Excel (.xlsx) : l’extension PHP « zip » n’est pas activée sur ce serveur. '
+                    .'Dans php.ini, activez extension=zip puis redémarrez le serveur web, '
+                    .'ou enregistrez votre classeur en CSV dans Excel (Fichier → Enregistrer sous → CSV UTF-8) et importez ce fichier.';
+            } else {
+                $msg = 'Impossible de lire le fichier : '.$msg;
+            }
+
+            return redirect()
+                ->route('verification-paie.usine', ['id_usine' => $id_usine])
+                ->with('flash_error', $msg);
+        }
+
+        if (count($numbers) === 0) {
+            return redirect()
+                ->route('verification-paie.usine', ['id_usine' => $id_usine])
+                ->with('flash_error', 'Aucun numéro de ticket trouvé. Ajoutez une colonne NUMERO_TICKET ou saisissez les numéros en colonne A. Formats acceptés : .xlsx, .xls, .csv.');
+        }
+
+        $results = [];
+        $summary = [
+            'total' => count($numbers),
+            'trouve_api' => 0,
+            'deja_local' => 0,
+            'mauvaise_usine' => 0,
+            'introuvable' => 0,
+        ];
+
+        foreach ($numbers as $numero) {
+            if (Ticket::existsByNumero($numero)) {
+                $results[] = [
+                    'numero' => $numero,
+                    'statut' => 'deja_local',
+                    'message' => 'Déjà enregistré en base locale (ticket vérifié).',
+                ];
+                $summary['deja_local']++;
+
+                continue;
+            }
+
+            $r = $lookup->findTicketInIndex($index, $numero, $idUsine);
+
+            if ($r['status'] === 'found') {
+                $ticket = $r['ticket'];
+                $results[] = [
+                    'numero' => $numero,
+                    'statut' => 'trouve_api',
+                    'message' => "Présent dans l'API Pegasus pour cette usine.",
+                    'date_ticket' => $ticket['date_ticket'] ?? null,
+                    'poids' => $ticket['poids'] ?? null,
+                    'created_at' => $ticket['created_at'] ?? null,
+                ];
+                $summary['trouve_api']++;
+            } elseif ($r['status'] === 'wrong_usine') {
+                $results[] = [
+                    'numero' => $numero,
+                    'statut' => 'mauvaise_usine',
+                    'message' => 'Trouvé dans l’API mais rattaché à une autre usine.',
+                ];
+                $summary['mauvaise_usine']++;
+            } else {
+                $introuvables->record($numero, $idUsine, $request->user());
+                $results[] = [
+                    'numero' => $numero,
+                    'statut' => 'introuvable',
+                    'message' => 'Absent de l’API — enregistré en base locale (tickets introuvables).',
+                ];
+                $summary['introuvable']++;
+            }
+        }
+
+        // Stocker en cache pour éviter les limites de session (expire après 30 minutes)
+        $cacheKey = 'paie_excel_' . $request->user()->id . '_' . $id_usine;
+        cache()->put($cacheKey, ['results' => $results, 'summary' => $summary], now()->addMinutes(30));
+
+        return redirect()
+            ->route('verification-paie.usine', ['id_usine' => $id_usine])
+            ->with('paie_excel_cache_key', $cacheKey);
+    }
+
+    public function paieExcelTemplate(): StreamedResponse
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setCellValue('A1', 'NUMERO_TICKET');
+        $sheet->setCellValue('A2', 'EX-000001');
+        $sheet->setCellValue('A3', 'AY-300762');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer): void {
+            $writer->save('php://output');
+        }, 'modele-verification-paie.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function printIntrouvables(Request $request, string $id_usine): Response|RedirectResponse
+    {
+        $request->validate([
+            'numeros' => ['required', 'array', 'min:1'],
+            'numeros.*' => ['required', 'string'],
+        ]);
+
+        [$usine, $error] = $this->fetchUsineFromApi($id_usine);
+
+        if ($error !== null) {
+            return redirect()
+                ->route('verification-paie.usine', ['id_usine' => $id_usine])
+                ->with('flash_error', $error);
+        }
+
+        $numeros = $request->input('numeros', []);
+        $nomUsine = $usine['nom_usine'] ?? ('Usine #' . $id_usine);
+
+        return Pdf::loadView('verification-paie.introuvables_pdf', [
+            'numeros' => $numeros,
+            'nomUsine' => $nomUsine,
+            'idUsine' => (int) $id_usine,
+            'generatedAt' => Carbon::now()->format('d/m/Y H:i'),
+            'userName' => $request->user()->name ?: $request->user()->email,
+        ])
+            ->setPaper('a4', 'portrait')
+            ->stream('tickets-introuvables-usine-' . $id_usine . '.pdf');
+    }
+
+    public function printTrouves(Request $request, string $id_usine): Response|RedirectResponse
+    {
+        // Récupérer les données depuis le cache
+        $cacheKey = 'paie_excel_' . $request->user()->id . '_' . $id_usine;
+        $cached = cache()->get($cacheKey);
+
+        if (!$cached || empty($cached['results'])) {
+            return redirect()
+                ->route('verification-paie.usine', ['id_usine' => $id_usine])
+                ->with('flash_error', 'Aucune donnée de vérification trouvée. Veuillez relancer la vérification.');
+        }
+
+        [$usine, $error] = $this->fetchUsineFromApi($id_usine);
+
+        if ($error !== null) {
+            return redirect()
+                ->route('verification-paie.usine', ['id_usine' => $id_usine])
+                ->with('flash_error', $error);
+        }
+
+        // Filtrer les tickets trouvés dans l'API
+        $results = $cached['results'];
+        $tickets = [];
+        $poidsTotal = 0;
+
+        foreach ($results as $r) {
+            if (($r['statut'] ?? '') === 'trouve_api') {
+                $poids = isset($r['poids']) ? (float) $r['poids'] : 0;
+                $tickets[] = [
+                    'numero' => $r['numero'] ?? '—',
+                    'dateTicket' => isset($r['date_ticket']) ? Carbon::parse($r['date_ticket'])->format('d/m/Y') : '—',
+                    'poids' => $poids > 0 ? number_format($poids, 0, ',', ' ') . ' kg' : '—',
+                ];
+                $poidsTotal += $poids;
+            }
+        }
+
+        $nomUsine = $usine['nom_usine'] ?? ('Usine #' . $id_usine);
+
+        return Pdf::loadView('verification-paie.trouves_pdf', [
+            'tickets' => $tickets,
+            'nomUsine' => $nomUsine,
+            'idUsine' => (int) $id_usine,
+            'generatedAt' => Carbon::now()->format('d/m/Y H:i'),
+            'userName' => $request->user()->name ?: $request->user()->email,
+            'poidsTotal' => $poidsTotal,
+        ])
+            ->setPaper('a4', 'portrait')
+            ->stream('tickets-trouves-usine-' . $id_usine . '.pdf');
+    }
+
+    /**
+     * @return array{usines: list<array<string, mixed>>, pagination: ?array<string, mixed>, error: ?string, search: string, ticketCountsByUsine: array<int, int>}
+     */
+    private function mesUsinesListContext(Request $request): array
     {
         $page = max(1, (int) $request->query('page', 1));
         $search = trim((string) $request->query('search', ''));
@@ -53,13 +318,13 @@ class VerificationController extends Controller
             $usines
         );
 
-        return view('verifications', [
+        return [
             'usines' => $usines,
             'pagination' => $pagination,
             'error' => $error,
             'search' => $search,
             'ticketCountsByUsine' => VerifiedTicketCounts::byUsineForUser((int) $request->user()->id, $usineIds),
-        ]);
+        ];
     }
 
     public function show(Request $request, string $id_usine, PegasusReferenceLookup $lookup): View

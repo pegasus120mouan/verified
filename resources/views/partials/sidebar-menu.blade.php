@@ -26,6 +26,12 @@
       <div class="text-truncate">Tickets introuvables</div>
     </a>
   </li>
+  <li class="menu-item @if(request()->routeIs('verification-paie.*')) active @endif">
+    <a href="{{ route('verification-paie.index') }}" class="menu-link">
+      <i class="menu-icon tf-icons bx bx-wallet"></i>
+      <div class="text-truncate">Vérification paie</div>
+    </a>
+  </li>
   <li class="menu-item @if(request()->routeIs('agents.*')) active @endif">
     <a href="{{ route('agents.index') }}" class="menu-link">
       <i class="menu-icon tf-icons bx bx-group"></i>

@@ -591,6 +591,13 @@
                                             'Ticket déjà vérifié',
                                             msg || 'Ce ticket a déjà été vérifié.'
                                         );
+                                    } else if (body.reason === 'already_reported_introuvable') {
+                                        markRowIntrouvable(row, msg);
+                                        showFeedbackModal(
+                                            'warning',
+                                            'Déjà signalé introuvable',
+                                            msg || 'Ce numéro a déjà été signalé comme introuvable.'
+                                        );
                                     }
                                 }
                             }

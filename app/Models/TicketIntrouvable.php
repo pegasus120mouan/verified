@@ -24,12 +24,12 @@ class TicketIntrouvable extends Model
         return $this->belongsTo(User::class, 'id_utilisateur', 'id');
     }
 
-    public static function existsByNumero(string $numero, int $userId): bool
+    public static function existsByNumero(string $numero): bool
     {
-        return static::findByNumero($numero, $userId) !== null;
+        return static::findByNumero($numero) !== null;
     }
 
-    public static function findByNumero(string $numero, int $userId): ?self
+    public static function findByNumero(string $numero): ?self
     {
         $trimmed = trim($numero);
         if ($trimmed === '') {
@@ -37,7 +37,6 @@ class TicketIntrouvable extends Model
         }
 
         $existing = static::query()
-            ->where('id_utilisateur', $userId)
             ->where('numero_ticket', $trimmed)
             ->first();
 
@@ -51,13 +50,13 @@ class TicketIntrouvable extends Model
         }
 
         return static::query()
-            ->where('id_utilisateur', $userId)
             ->whereRaw('LOWER(REPLACE(TRIM(numero_ticket), " ", "")) = ?', [$compact])
             ->first();
     }
 
     /**
-     * Enregistre un ticket introuvable (API). Retourne true si nouvel enregistrement.
+     * Enregistre un ticket introuvable (partagé entre tous les utilisateurs de cette base).
+     * Retourne true si nouvel enregistrement.
      */
     public static function record(string $numero, ?int $idUsine, int $userId, string $raison = 'not_found'): bool
     {
@@ -66,7 +65,7 @@ class TicketIntrouvable extends Model
             return false;
         }
 
-        $existing = static::findByNumero($numero, $userId);
+        $existing = static::findByNumero($numero);
 
         if ($existing !== null) {
             $existing->update([
